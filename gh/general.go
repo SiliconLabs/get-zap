@@ -42,36 +42,35 @@ func DefaultAction(cfg *GithubConfiguration) {
 	DownloadAssets(cfg, true)
 }
 
-func IsLocalAsset(assetName string) bool {
-	if runtime.GOOS == "windows" {
-		if strings.Contains(assetName, "-windows") || strings.Contains(assetName, "-win") {
-			if runtime.GOARCH == "amd64" && strings.Contains(assetName, "-arm64") {
-				return false
-			}
-			return true
-		}
-	} else if runtime.GOOS == "darwin" {
-		if strings.Contains(assetName, "-darwin") || strings.Contains(assetName, "-mac") || strings.Contains(assetName, "-osx") {
-			if runtime.GOARCH == "amd64" && strings.Contains(assetName, "-arm64") {
-				return false
-			}
-			if runtime.GOARCH == "arm64" && (strings.Contains(assetName, "-amd64") || strings.Contains(assetName, "-x64")) {
-				return false
-			}
-			return true
-		}
-	} else if runtime.GOOS == "linux" {
-		if strings.Contains(assetName, "-linux") {
-			if runtime.GOARCH == "amd64" && strings.Contains(assetName, "-arm64") {
-				return false
-			}
-			if runtime.GOARCH == "arm64" && (strings.Contains(assetName, "-amd64") || strings.Contains(assetName, "-x64")) {
-				return false
-			}
-			return true
-		}
+func DetermineAssetPlatform(assetName string) (os string, arch string) {
+	os = ""
+	arch = ""
+	if strings.Contains(assetName, "-windows") || strings.Contains(assetName, "-win") {
+		os = "windows"
+	} else if strings.Contains(assetName, "-darwin") || strings.Contains(assetName, "-mac") || strings.Contains(assetName, "-osx") {
+		os = "darwin"
+	} else if strings.Contains(assetName, "-linux") {
+		os = "linux"
 	}
-	return false
+	if strings.Contains(assetName, "-amd64") || strings.Contains(assetName, "-x64") || strings.Contains(assetName, "-x86_64") {
+		arch = "amd64"
+	} else if strings.Contains(assetName, "-arm64") || strings.Contains(assetName, "-aarch64") {
+		arch = "arm64"
+	}
+	return
+}
+
+func IsLocalAsset(assetOs string, assetArch string) bool {
+	if assetOs == "" {
+		return true
+	}
+	if assetOs != runtime.GOOS {
+		return false
+	}
+	if assetArch != "" && assetArch != runtime.GOARCH {
+		return false
+	}
+	return true
 }
 
 // If local only is true, then only assets matching the local platform will be downloaded
@@ -101,8 +100,9 @@ func DownloadAssets(cfg *GithubConfiguration, localOnly bool) {
 	for _, asset := range assets {
 
 		if localOnly {
-			if !IsLocalAsset(asset.GetName()) {
-				fmt.Printf("Skipping asset '%v' as it does not match the local platform.\n", asset.GetName())
+			assetOs, assetArch := DetermineAssetPlatform(asset.GetName())
+			if !IsLocalAsset(assetOs, assetArch) {
+				fmt.Printf("Skipping asset '%v' [os='%v', arch='%v'] as it does not match the local platform.\n", asset.GetName(), assetOs, assetArch)
 				continue
 			}
 		}

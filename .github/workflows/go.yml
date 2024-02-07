@@ -26,3 +26,22 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: Build Linux amd64
+      run: GOOS=linux GOARCH=amd64 go build -o bin/get-zap-linux-amd64
+    - name: Build Linux arm64
+      run: GOOS=linux GOARCH=arm64 go build -o bin/get-zap-linux-arm64
+    - name: Build Darwin amd64
+      run: GOOS=darwin GOARCH=amd64 go build -o bin/get-zap-darwin-amd64
+    - name: Build Darwin arm64
+      run: GOOS=darwin GOARCH=arm64 go build -o bin/get-zap-darwin-arm64
+    - name: Build Windows amd64
+      run: GOOS=windows GOARCH=amd64 go build -o bin/get-zap-windows-amd64
+    - name: Build Windows arm64
+      run: GOOS=windows GOARCH=arm64 go build -o bin/get-zap-windows-arm64
+
+    - name: Archive the binaries
+      uses: actions/upload-artifact@v2
+      with:
+        name: get-zap
+        path: bin/

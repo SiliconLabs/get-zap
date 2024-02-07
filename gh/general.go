@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"runtime"
+	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/spf13/cobra"
@@ -36,10 +38,44 @@ func CreateGithubClient(cfg *GithubConfiguration) *github.Client {
 }
 
 func DefaultAction(cfg *GithubConfiguration) {
-	DownloadAssets(cfg)
+	fmt.Printf("Downloading latest release of zap for the local platform %v/%v...\n", runtime.GOOS, runtime.GOARCH)
+	DownloadAssets(cfg, true)
 }
 
-func DownloadAssets(cfg *GithubConfiguration) {
+func IsLocalAsset(assetName string) bool {
+	if runtime.GOOS == "windows" {
+		if strings.Contains(assetName, "-windows") || strings.Contains(assetName, "-win") {
+			if runtime.GOARCH == "amd64" && strings.Contains(assetName, "-arm64") {
+				return false
+			}
+			return true
+		}
+	} else if runtime.GOOS == "darwin" {
+		if strings.Contains(assetName, "-darwin") || strings.Contains(assetName, "-mac") || strings.Contains(assetName, "-osx") {
+			if runtime.GOARCH == "amd64" && strings.Contains(assetName, "-arm64") {
+				return false
+			}
+			if runtime.GOARCH == "arm64" && (strings.Contains(assetName, "-amd64") || strings.Contains(assetName, "-x64")) {
+				return false
+			}
+			return true
+		}
+	} else if runtime.GOOS == "linux" {
+		if strings.Contains(assetName, "-linux") {
+			if runtime.GOARCH == "amd64" && strings.Contains(assetName, "-arm64") {
+				return false
+			}
+			if runtime.GOARCH == "arm64" && (strings.Contains(assetName, "-amd64") || strings.Contains(assetName, "-x64")) {
+				return false
+			}
+			return true
+		}
+	}
+	return false
+}
+
+// If local only is true, then only assets matching the local platform will be downloaded
+func DownloadAssets(cfg *GithubConfiguration, localOnly bool) {
 
 	client := CreateGithubClient(cfg)
 	var release *github.RepositoryRelease
@@ -63,6 +99,14 @@ func DownloadAssets(cfg *GithubConfiguration) {
 	assets, _, err := client.Repositories.ListReleaseAssets(context.Background(), cfg.Owner, cfg.Repo, release.GetID(), &github.ListOptions{})
 	cobra.CheckErr(err)
 	for _, asset := range assets {
+
+		if localOnly {
+			if !IsLocalAsset(asset.GetName()) {
+				fmt.Printf("Skipping asset '%v' as it does not match the local platform.\n", asset.GetName())
+				continue
+			}
+		}
+
 		rc, redirect, err := client.Repositories.DownloadReleaseAsset(context.Background(), cfg.Owner, cfg.Repo, asset.GetID())
 		cobra.CheckErr(err)
 		if rc != nil {

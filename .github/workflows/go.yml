@@ -15,7 +15,7 @@ jobs:
     name: Build local
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
@@ -34,7 +34,7 @@ jobs:
         goarch: [amd64, arm64]
     needs: [build]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -42,7 +42,7 @@ jobs:
       - name: Build get-zap for a given architecture
         run: GOOS=${{matrix.goos}} GOARCH=${{matrix.goarch}} go build -o bin/get-zap-${{matrix.goos}}-${{matrix.goarch}}${{matrix.goos == 'windows' && '.exe' || ''}}
       - name: Archive the binary
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: get-zap-${{matrix.goos}}-${{matrix.goarch}}${{matrix.goos == 'windows' && '.exe' || ''}}
           path: bin/get-zap-${{matrix.goos}}-${{matrix.goarch}}${{matrix.goos == 'windows' && '.exe' || ''}}

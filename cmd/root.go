@@ -13,11 +13,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-const ownerArg = "owner"
-const repoArg = "repo"
-const githubTokenArg = "token"
-const releaseArg = "release"
-const assetArg = "asset"
+const ownerArg = "ghOwner"
+const repoArg = "ghRepo"
+const githubTokenArg = "ghToken"
+const releaseArg = "ghRelease"
+const assetArg = "ghAsset"
 const rtUrl = "rtUrl"
 const rtApiKey = "rtApiKey"
 const rtUser = "rtUser"

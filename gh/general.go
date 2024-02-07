@@ -26,7 +26,8 @@ type GithubConfiguration struct {
 func CreateGithubClient(cfg *GithubConfiguration) *github.Client {
 	var client *github.Client
 	if cfg.Token == "" {
-		fmt.Println("You do not have GET_ZAP_TOKEN set. This will limit the number of requests you can make to the github API.")
+		fmt.Println("You do not have GET_ZAP_GHTOKEN set. This will limit the number of requests you can make to the github API.")
+		fmt.Println("In order to get Github token:\n  1. go to your settings at https://github.com/settings/profile\n  2. follow 'Developer Settings' -> 'Personal access tokens'\n  3. Create a token.\n  4. Add it to GET_ZAP_GHTOKEN environment variable or use --ghToken argument.")
 		client = github.NewClient(nil)
 	} else {
 		ctx := context.Background()

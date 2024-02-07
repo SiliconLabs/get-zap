@@ -38,7 +38,7 @@ func CreateGithubClient(cfg *GithubConfiguration) *github.Client {
 }
 
 func DefaultAction(cfg *GithubConfiguration) {
-	fmt.Printf("Downloading latest release of zap for the local platform %v/%v...\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("Downloading release '%v' of repo '%v/%v' for the platform '%v/%v'...\n", cfg.Release, cfg.Owner, cfg.Repo, runtime.GOOS, runtime.GOARCH)
 	DownloadAssets(cfg, true)
 }
 

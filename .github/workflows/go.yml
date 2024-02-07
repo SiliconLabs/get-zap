@@ -42,7 +42,7 @@ jobs:
       - name: Build get-zap for a given architecture
         run: GOOS=${{matrix.goos}} GOARCH=${{matrix.goarch}} go build -o bin/get-zap-${{matrix.goos}}-${{matrix.goarch}}${{matrix.goos == 'windows' && '.exe' || ''}}
       - name: Strip Linux and Windows binaries
-        if: matrix.goos != 'darwin'
+        if: matrix.goos != 'darwin' && matrix.goarch != 'arm64'
         run: strip bin/get-zap-${{matrix.goos}}-${{matrix.goarch}}${{matrix.goos == 'windows' && '.exe' || ''}}
       - name: Archive the binary
         uses: actions/upload-artifact@v4

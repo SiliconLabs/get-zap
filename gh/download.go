@@ -5,7 +5,6 @@ package gh
 
 import (
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -76,7 +75,7 @@ func DownloadFileFromUrl(urlAsString string, destinationPath string, sec *Downlo
 	}
 
 	if !sec.allowHttp && u.Scheme == "http" {
-		return fmt.Errorf("Only secure encrypted HTTPS protocol is allowed. Downloads via HTTP are blocked: %v", urlAsString)
+		return fmt.Errorf("only secure encrypted HTTPS protocol is allowed, downloads via HTTP are blocked: %v", urlAsString)
 	}
 
 	// Security alert: Let's do an actual get now
@@ -85,7 +84,7 @@ func DownloadFileFromUrl(urlAsString string, destinationPath string, sec *Downlo
 		return err
 	}
 	if response.StatusCode != http.StatusOK {
-		return errors.New(fmt.Sprintf("HTTP error: %v", response.StatusCode))
+		return fmt.Errorf("HTTP error: %v", response.StatusCode)
 	}
 
 	defer response.Body.Close()

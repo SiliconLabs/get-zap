@@ -56,7 +56,7 @@ func ArtifactoryDownload(cfg *ArtifactoryConfiguration) {
 	fmt.Printf("Download files: success %v, failure %v\n", success, failures)
 }
 
-func ArtifactoryUpload(cfg *ArtifactoryConfiguration) {
+func ArtifactoryUpload(cfg *ArtifactoryConfiguration, file string) {
 	rtDetails := cfg.CreateDetails()
 
 	s, err := config.NewConfigBuilder().SetServiceDetails(*rtDetails).Build()
@@ -66,6 +66,8 @@ func ArtifactoryUpload(cfg *ArtifactoryConfiguration) {
 	cobra.CheckErr(err)
 
 	params := services.NewUploadParams()
+	params.Pattern = file
+	params.Target = cfg.Repo + "/"
 
 	success, failures, err := m.UploadFiles(params)
 	cobra.CheckErr(err)

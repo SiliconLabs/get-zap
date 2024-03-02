@@ -4,7 +4,7 @@ Copyright © 2024 Silicon Labs
 package cmd
 
 import (
-	"fmt"
+	"silabs/get-zap/jf"
 
 	"github.com/spf13/cobra"
 )
@@ -14,10 +14,14 @@ var rtUploadCmd = &cobra.Command{
 	Short: "Uploads a file to artifactory",
 	Long:  `Performs an upload of specified files to artifactory.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("upload called")
+		file, err := cmd.Flags().GetString("file")
+		cobra.CheckErr(err)
+		jf.ArtifactoryUpload(ReadArtifactoryConfiguration(), file)
 	},
 }
 
 func init() {
 	rtCmd.AddCommand(rtUploadCmd)
+	rtUploadCmd.Flags().StringP("file", "f", "", "File to upload")
+	rtUploadCmd.MarkFlagRequired("file")
 }

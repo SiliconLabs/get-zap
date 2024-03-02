@@ -40,7 +40,7 @@ func CreateGithubClient(cfg *GithubConfiguration) *github.Client {
 
 func DefaultAction(cfg *GithubConfiguration) {
 	fmt.Printf("Downloading release '%v' of repo '%v/%v' for the platform '%v/%v'...\n", cfg.Release, cfg.Owner, cfg.Repo, runtime.GOOS, runtime.GOARCH)
-	DownloadAssets(cfg, true)
+	DownloadAssets(cfg, true, ".zip")
 }
 
 func DetermineAssetPlatform(assetName string) (os string, arch string) {
@@ -75,7 +75,7 @@ func IsLocalAsset(assetOs string, assetArch string) bool {
 }
 
 // If local only is true, then only assets matching the local platform will be downloaded
-func DownloadAssets(cfg *GithubConfiguration, localOnly bool) {
+func DownloadAssets(cfg *GithubConfiguration, localOnly bool, suffixOnly string) {
 
 	client := CreateGithubClient(cfg)
 	var release *github.RepositoryRelease
@@ -106,6 +106,11 @@ func DownloadAssets(cfg *GithubConfiguration, localOnly bool) {
 				fmt.Printf("Skipping asset '%v' [os='%v', arch='%v'] as it does not match the local platform.\n", asset.GetName(), assetOs, assetArch)
 				continue
 			}
+		}
+
+		if suffixOnly != "" && !strings.HasSuffix(asset.GetName(), suffixOnly) {
+			fmt.Printf("Skipping asset '%v' as it does not have the suffix '%v'.\n", asset.GetName(), suffixOnly)
+			continue
 		}
 
 		rc, redirect, err := client.Repositories.DownloadReleaseAsset(context.Background(), cfg.Owner, cfg.Repo, asset.GetID())

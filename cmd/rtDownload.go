@@ -14,10 +14,14 @@ var rtDownloadCmd = &cobra.Command{
 	Short: "Downloads a file from Artifactory",
 	Long:  `Performs a download of one or more files from Artifactory.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		jf.ArtifactoryDownload(ReadArtifactoryConfiguration())
+		file, err := cmd.Flags().GetString("file")
+		cobra.CheckErr(err)
+		jf.ArtifactoryDownload(ReadArtifactoryConfiguration(), file)
 	},
 }
 
 func init() {
 	rtCmd.AddCommand(rtDownloadCmd)
+	rtDownloadCmd.Flags().StringP("file", "f", "", "File to upload")
+	rtDownloadCmd.MarkFlagRequired("file")
 }

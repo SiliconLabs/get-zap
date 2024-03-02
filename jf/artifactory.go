@@ -28,7 +28,7 @@ func (cfg *ArtifactoryConfiguration) IsValid() bool {
 
 func (cfg *ArtifactoryConfiguration) CreateDetails() *auth.ServiceDetails {
 	if !cfg.IsValid() {
-		cobra.CheckErr(fmt.Errorf("Invalid artifactory configuration. You need to provide url, api key and user either via command line, environment variables, or configuration file."))
+		cobra.CheckErr(fmt.Errorf("invalid artifactory configuration, you need to provide url, api key and user either via command line, environment variables, or configuration file"))
 	}
 	rtDetails := rtAuth.NewArtifactoryDetails()
 	rtDetails.SetUrl(cfg.Url)
@@ -37,7 +37,28 @@ func (cfg *ArtifactoryConfiguration) CreateDetails() *auth.ServiceDetails {
 	return &rtDetails
 }
 
-func ArtifactoryDownload(cfg *ArtifactoryConfiguration) {
+func ArtifactoryDelete(cfg *ArtifactoryConfiguration, pattern string) {
+	rtDetails := cfg.CreateDetails()
+
+	s, err := config.NewConfigBuilder().SetServiceDetails(*rtDetails).Build()
+	cobra.CheckErr(err)
+
+	m, err := artifactory.New(s)
+	cobra.CheckErr(err)
+
+	params := services.NewDeleteParams()
+	params.Pattern = cfg.Repo + "/" + pattern
+	fmt.Printf("Deleting files from %v/%v: %v\n", cfg.Url, cfg.Repo, params.Pattern)
+
+	pathsToDelete, err := m.GetPathsToDelete(params)
+	cobra.CheckErr(err)
+	defer pathsToDelete.Close()
+	cnt, err := m.DeleteFiles(pathsToDelete)
+	cobra.CheckErr(err)
+	fmt.Printf("Deleted files: %v\n", cnt)
+}
+
+func ArtifactoryDownload(cfg *ArtifactoryConfiguration, pattern string) {
 
 	rtDetails := cfg.CreateDetails()
 
@@ -48,15 +69,15 @@ func ArtifactoryDownload(cfg *ArtifactoryConfiguration) {
 	cobra.CheckErr(err)
 
 	params := services.NewDownloadParams()
-	params.Pattern = cfg.Repo + "/" + cfg.Path
-	fmt.Println("Downloading files from", cfg.Url, "with pattern", params.Pattern)
+	params.Pattern = cfg.Repo + "/" + pattern
+	fmt.Printf("Downloading files from %v/%v: %v\n", cfg.Url, cfg.Repo, params.Pattern)
 	success, failures, err := m.DownloadFiles(params)
 	cobra.CheckErr(err)
 
-	fmt.Printf("Download files: success %v, failure %v\n", success, failures)
+	fmt.Printf("Downloaded files: success %v, failure %v\n", success, failures)
 }
 
-func ArtifactoryUpload(cfg *ArtifactoryConfiguration, file string) {
+func ArtifactoryUpload(cfg *ArtifactoryConfiguration, pattern string) {
 	rtDetails := cfg.CreateDetails()
 
 	s, err := config.NewConfigBuilder().SetServiceDetails(*rtDetails).Build()
@@ -66,10 +87,11 @@ func ArtifactoryUpload(cfg *ArtifactoryConfiguration, file string) {
 	cobra.CheckErr(err)
 
 	params := services.NewUploadParams()
-	params.Pattern = file
+	params.Pattern = pattern
+	fmt.Printf("Uploading files to %v/%v: %v\n", cfg.Url, cfg.Repo, params.Pattern)
 	params.Target = cfg.Repo + "/"
 
 	success, failures, err := m.UploadFiles(params)
 	cobra.CheckErr(err)
-	fmt.Printf("Upload files: success %v, failure %v\n", success, failures)
+	fmt.Printf("Uploaded files: success %v, failure %v\n", success, failures)
 }

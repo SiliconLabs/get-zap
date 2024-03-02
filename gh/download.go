@@ -4,12 +4,17 @@ Copyright © 2024 Silicon Labs
 package gh
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
+
+	"github.com/google/go-github/github"
+	"github.com/spf13/cobra"
 )
 
 type DownloadOptions struct {
@@ -51,9 +56,73 @@ func DefaultSecurityOptions() *DownloadOptions {
 	return &s
 }
 
+// If local only is true, then only assets matching the local platform will be downloaded
+func DownloadAssets(cfg *GithubConfiguration, destinationDirectory string, localOnly bool, suffixOnly string) {
+
+	client := CreateGithubClient(cfg)
+	var release *github.RepositoryRelease
+	// Get latest release
+	if cfg.Release == "latest" {
+		r, _, err := client.Repositories.GetLatestRelease(context.Background(), cfg.Owner, cfg.Repo)
+		cobra.CheckErr(err)
+		release = r
+	} else if cfg.Release == "all" {
+		fmt.Println("Downloading assets for all releases is not supported. Please use 'latest' or specific release.")
+		return
+	} else {
+		release = findRelease(client, cfg.Owner, cfg.Repo, cfg.Release)
+		if release == nil {
+			fmt.Printf("Could not find release '%v'\n", cfg.Release)
+			return
+		}
+	}
+	fmt.Printf("Downloading assets for release '%v' of repo '%v/%v':\n", release.GetTagName(), cfg.Owner, cfg.Repo)
+	printRelease(client, cfg.Owner, cfg.Repo, release)
+	assets, _, err := client.Repositories.ListReleaseAssets(context.Background(), cfg.Owner, cfg.Repo, release.GetID(), &github.ListOptions{})
+	cobra.CheckErr(err)
+	for _, asset := range assets {
+
+		if localOnly {
+			assetOs, assetArch := DetermineAssetPlatform(asset.GetName())
+			if !IsLocalAsset(assetOs, assetArch) {
+				fmt.Printf("Skipping asset '%v' [os='%v', arch='%v'] as it does not match the local platform.\n", asset.GetName(), assetOs, assetArch)
+				continue
+			}
+		}
+
+		if suffixOnly != "" && !strings.HasSuffix(asset.GetName(), suffixOnly) {
+			fmt.Printf("Skipping asset '%v' as it does not have the suffix '%v'.\n", asset.GetName(), suffixOnly)
+			continue
+		}
+
+		rc, redirect, err := client.Repositories.DownloadReleaseAsset(context.Background(), cfg.Owner, cfg.Repo, asset.GetID())
+		cobra.CheckErr(err)
+		err = os.MkdirAll(release.GetName(), 0775)
+		cobra.CheckErr(err)
+		if rc != nil {
+			err = downloadFileFromReadCloser(rc, release.GetName(), asset.GetName())
+			cobra.CheckErr(err)
+		} else {
+			err = downloadFileFromUrl(redirect, release.GetName(), asset.GetName(), DefaultSecurityOptions())
+			cobra.CheckErr(err)
+		}
+	}
+}
+
+func downloadFileFromReadCloser(rc io.ReadCloser, destinationDirectory string, destinationPath string) error {
+	defer rc.Close()
+	output, err := os.Create(destinationDirectory + "/" + destinationPath)
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+	_, err = io.Copy(output, rc)
+	return err
+}
+
 // This function downloads a file from a given URL and puts it into the
 // destination path.
-func DownloadFileFromUrl(urlAsString string, destinationPath string, sec *DownloadOptions) error {
+func downloadFileFromUrl(urlAsString string, destinationDirectory string, destinationPath string, sec *DownloadOptions) error {
 
 	tlsConfig := &tls.Config{}
 	if sec.skipCertCheck {
@@ -92,7 +161,7 @@ func DownloadFileFromUrl(urlAsString string, destinationPath string, sec *Downlo
 	len := response.ContentLength
 	fmt.Printf("Downloading %v bytes to %v ...\n", len, destinationPath)
 
-	output, err := os.Create(destinationPath)
+	output, err := os.Create(destinationDirectory + "/" + destinationPath)
 	if err != nil {
 		return err
 	}

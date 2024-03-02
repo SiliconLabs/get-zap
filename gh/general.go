@@ -6,8 +6,8 @@ package gh
 import (
 	"context"
 	"fmt"
-	"io"
 	"runtime"
+	"silabs/get-zap/jf"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -38,9 +38,9 @@ func CreateGithubClient(cfg *GithubConfiguration) *github.Client {
 	return client
 }
 
-func DefaultAction(cfg *GithubConfiguration) {
-	fmt.Printf("Downloading release '%v' of repo '%v/%v' for the platform '%v/%v'...\n", cfg.Release, cfg.Owner, cfg.Repo, runtime.GOOS, runtime.GOARCH)
-	DownloadAssets(cfg, true, ".zip")
+func DefaultAction(ghCfg *GithubConfiguration, rtCfg *jf.ArtifactoryConfiguration) {
+	fmt.Printf("Downloading release '%v' of repo '%v/%v' for the platform '%v/%v'...\n", ghCfg.Release, ghCfg.Owner, ghCfg.Repo, runtime.GOOS, runtime.GOARCH)
+	DownloadAssets(ghCfg, ".", true, ".zip")
 }
 
 func DetermineAssetPlatform(assetName string) (os string, arch string) {
@@ -72,68 +72,6 @@ func IsLocalAsset(assetOs string, assetArch string) bool {
 		return false
 	}
 	return true
-}
-
-// If local only is true, then only assets matching the local platform will be downloaded
-func DownloadAssets(cfg *GithubConfiguration, localOnly bool, suffixOnly string) {
-
-	client := CreateGithubClient(cfg)
-	var release *github.RepositoryRelease
-	// Get latest release
-	if cfg.Release == "latest" {
-		r, _, err := client.Repositories.GetLatestRelease(context.Background(), cfg.Owner, cfg.Repo)
-		cobra.CheckErr(err)
-		release = r
-	} else if cfg.Release == "all" {
-		fmt.Println("Downloading assets for all releases is not supported. Please use 'latest' or specific release.")
-		return
-	} else {
-		release = findRelease(client, cfg.Owner, cfg.Repo, cfg.Release)
-		if release == nil {
-			fmt.Printf("Could not find release '%v'\n", cfg.Release)
-			return
-		}
-	}
-	fmt.Printf("Downloading assets for release '%v' of repo '%v/%v':\n", release.GetTagName(), cfg.Owner, cfg.Repo)
-	printRelease(client, cfg.Owner, cfg.Repo, release)
-	assets, _, err := client.Repositories.ListReleaseAssets(context.Background(), cfg.Owner, cfg.Repo, release.GetID(), &github.ListOptions{})
-	cobra.CheckErr(err)
-	for _, asset := range assets {
-
-		if localOnly {
-			assetOs, assetArch := DetermineAssetPlatform(asset.GetName())
-			if !IsLocalAsset(assetOs, assetArch) {
-				fmt.Printf("Skipping asset '%v' [os='%v', arch='%v'] as it does not match the local platform.\n", asset.GetName(), assetOs, assetArch)
-				continue
-			}
-		}
-
-		if suffixOnly != "" && !strings.HasSuffix(asset.GetName(), suffixOnly) {
-			fmt.Printf("Skipping asset '%v' as it does not have the suffix '%v'.\n", asset.GetName(), suffixOnly)
-			continue
-		}
-
-		rc, redirect, err := client.Repositories.DownloadReleaseAsset(context.Background(), cfg.Owner, cfg.Repo, asset.GetID())
-		cobra.CheckErr(err)
-		if rc != nil {
-			fmt.Printf("Not redirected.\n")
-			buff := make([]byte, 10*1024)
-			n, err := rc.Read(buff)
-			fmt.Printf("Read %d bytes\n", n)
-			if n > 0 {
-				fmt.Printf("Read %d bytes\n", n)
-			} else {
-				if err == io.EOF {
-					rc.Close()
-					fmt.Println("Eof")
-				} else {
-					cobra.CheckErr(err)
-				}
-			}
-		} else {
-			DownloadFileFromUrl(redirect, asset.GetName(), DefaultSecurityOptions())
-		}
-	}
 }
 
 func findRelease(client *github.Client, owner string, repo string, tag string) *github.RepositoryRelease {

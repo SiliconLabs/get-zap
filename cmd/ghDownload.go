@@ -15,7 +15,7 @@ var ghDownloadCmd = &cobra.Command{
 	Short: "Downloads assets from Github",
 	Long:  `This command can be used to download assets from Github.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		gh.DownloadAssets(ReadGithubConfiguration(), false, "")
+		gh.DownloadAssets(ReadGithubConfiguration(), ".", false, "")
 	},
 }
 

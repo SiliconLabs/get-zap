@@ -36,7 +36,7 @@ var rootCmd = &cobra.Command{
 	Short: "Application to retrieve artifacts from github.",
 	Long:  `This application by default retrieves zap artifacts, with the right arguments, it can be used to retrieve assets from any public github repo.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		gh.DefaultAction(ReadGithubConfiguration(), ReadArtifactoryConfiguration(), viper.GetBool(useGh), viper.GetBool(useRt))
+		Fetch(ReadGithubConfiguration(), ReadArtifactoryConfiguration(), viper.GetBool(useGh), viper.GetBool(useRt))
 	},
 }
 

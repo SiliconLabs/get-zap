@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"silabs/get-zap/jf"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -21,36 +20,6 @@ type GithubConfiguration struct {
 	Release string
 	Token   string
 	Asset   string
-}
-
-// This is what gets executed if no toplevel commands are passed.
-func DefaultAction(ghCfg *GithubConfiguration, rtCfg *jf.ArtifactoryConfiguration, useGh bool, useRt bool) {
-	if !useGh && !useRt {
-		fmt.Println("Neither Artifactory nor Github are enabled, nothing to do.")
-		return
-	}
-
-	if !useGh {
-		// We only check artifactory, if we don't find it, we're done.
-		if ghCfg.Release == "latest" || ghCfg.Release == "all" {
-			fmt.Printf("Artifactory does not cache 'latest' or 'all' releases. When using --useGh=false, please specify a specific release.\n")
-			return
-		}
-		jf.ArtifactoryDownload(rtCfg, ghCfg.Release+"/**")
-		return
-	}
-
-	if !useRt {
-		// We only attempt to download from github, if we don't find it, we're done.
-		fmt.Printf("Downloading release '%v' of repo '%v/%v' for the platform '%v/%v'...\n", ghCfg.Release, ghCfg.Owner, ghCfg.Repo, runtime.GOOS, runtime.GOARCH)
-		DownloadAssets(ghCfg, ".", true, ".zip")
-		return
-	}
-
-	// If we get here, we're going to do the following: first we attempt to download the assset from artifactory. If we can't find it, we will download it
-	// from github. If we do find it, we will then upload it to artifactory for the next time someone tries to download this same thing.
-	fmt.Printf("Full cycle not yet implemented.\n")
-
 }
 
 func CreateGithubClient(cfg *GithubConfiguration) *github.Client {

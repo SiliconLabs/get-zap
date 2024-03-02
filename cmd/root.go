@@ -24,6 +24,10 @@ const rtUser = "rtUser"
 const rtRepo = "rtRepo"
 const rtPath = "rtPath"
 
+const useRt = "useRt"
+const useGh = "useGh"
+const localRoot = "localRoot"
+
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
@@ -32,7 +36,7 @@ var rootCmd = &cobra.Command{
 	Short: "Application to retrieve artifacts from github.",
 	Long:  `This application by default retrieves zap artifacts, with the right arguments, it can be used to retrieve assets from any public github repo.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		gh.DefaultAction(ReadGithubConfiguration(), ReadArtifactoryConfiguration())
+		gh.DefaultAction(ReadGithubConfiguration(), ReadArtifactoryConfiguration(), viper.GetBool(useGh), viper.GetBool(useRt))
 	},
 }
 
@@ -73,12 +77,15 @@ func init() {
 	rootCmd.PersistentFlags().String(repoArg, "zap", "Name of the github repository.")
 	rootCmd.PersistentFlags().StringP(githubTokenArg, "t", "", "Github token to use for authentication.")
 	rootCmd.PersistentFlags().StringP(releaseArg, "r", "latest", "Release to download. Specify a name, or 'all' or 'latest' for all releases.")
+	rootCmd.PersistentFlags().String(localRoot, ".", "Local root directory to download assets to. All operations are limited to within this directory.")
 	rootCmd.PersistentFlags().StringP(assetArg, "a", "local", "Asset to download. Specify a name, or 'all' or 'local' for matching the platform.")
 	rootCmd.PersistentFlags().String(rtUrl, "", "Artifactory URL.")
 	rootCmd.PersistentFlags().String(rtApiKey, "", "Artifactory API Key.")
 	rootCmd.PersistentFlags().String(rtUser, "", "Artifactory user.")
 	rootCmd.PersistentFlags().String(rtRepo, "", "Artifactory repository.")
 	rootCmd.PersistentFlags().String(rtPath, "", "Artifactory path within the repo.")
+	rootCmd.PersistentFlags().Bool(useRt, true, "Use Artifactory.")
+	rootCmd.PersistentFlags().Bool(useGh, true, "Use GitHub.")
 
 	viper.BindPFlag(ownerArg, rootCmd.PersistentFlags().Lookup(ownerArg))
 	viper.BindPFlag(repoArg, rootCmd.PersistentFlags().Lookup(repoArg))
@@ -90,6 +97,9 @@ func init() {
 	viper.BindPFlag(rtUser, rootCmd.PersistentFlags().Lookup(rtUser))
 	viper.BindPFlag(rtRepo, rootCmd.PersistentFlags().Lookup(rtRepo))
 	viper.BindPFlag(rtPath, rootCmd.PersistentFlags().Lookup(rtPath))
+	viper.BindPFlag(useRt, rootCmd.PersistentFlags().Lookup(useRt))
+	viper.BindPFlag(useGh, rootCmd.PersistentFlags().Lookup(useGh))
+	viper.BindPFlag(localRoot, rootCmd.PersistentFlags().Lookup(localRoot))
 }
 
 func initConfig() {

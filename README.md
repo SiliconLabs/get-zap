@@ -9,7 +9,7 @@ It also supports Artifactory caching.
 
 So this program can be useful for you in any environment (CI, or personal desktop), where you have a following need:
   - retrieve assets from github project releases
-  - retrieve files from Artifactory
+  - download files from Artifactory
   - upload files to Artifactory
   - automate the process of: download a release artifact, if it exists in Artifactory, get it from there, otherwise get it directly from Github releases, along the way caching it to Artifactory for next time
 

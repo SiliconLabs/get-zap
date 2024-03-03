@@ -32,42 +32,39 @@ Note: command line arguments can modify this flow.`,
 func Fetch(ghCfg *gh.GithubConfiguration, rtCfg *jf.ArtifactoryConfiguration, useGh bool, useRt bool) {
 	if !useGh && !useRt {
 		fmt.Println("Neither Artifactory nor Github are enabled, nothing to do.")
-		return
-	}
-
-	if !useGh {
+	} else if !useGh {
 		// We only check artifactory, if we don't find it, we're done.
 		if ghCfg.Release == "latest" || ghCfg.Release == "all" {
 			fmt.Printf("Artifactory does not cache 'latest' or 'all' releases. When using --useGh=false, please specify a specific release.\n")
-			return
+		} else {
+			jf.ArtifactoryDownload(rtCfg, jf.ArtifactoryPattern(ghCfg.Release, true))
 		}
-		jf.ArtifactoryDownload(rtCfg, ghCfg.Release+"/**")
-		return
-	}
-
-	if !useRt {
+	} else if !useRt {
 		// We only attempt to download from github, if we don't find it, we're done.
 		fmt.Printf("Downloading release '%v' of repo '%v/%v' for the platform '%v/%v'...\n", ghCfg.Release, ghCfg.Owner, ghCfg.Repo, runtime.GOOS, runtime.GOARCH)
 		gh.DownloadAssets(ghCfg, ".", true, ".zip")
-		return
+	} else {
+		// If we get here, we're going to do the following: first we attempt to download the assset from artifactory. If we can't find it, we will download it
+		// from github. If we do find it, we will then upload it to artifactory for the next time someone tries to download this same thing.
+		if ghCfg.Release == "latest" || ghCfg.Release == "all" {
+			fmt.Printf("Artifactory does not cache 'latest' or 'all' releases. Downloading from github.\n")
+			gh.DownloadAssets(ghCfg, ".", true, ".zip")
+		} else {
+			success := jf.ArtifactoryDownload(rtCfg, jf.ArtifactoryPattern(ghCfg.Release, true))
+			if success > 0 {
+				fmt.Printf("Asset was retrieved from Artifactory.\n")
+			} else {
+				// Didn't find it in artifactory, let's go to github.
+				fmt.Printf("Asset not found in Artifactory, trying github.\n")
+				gh.DownloadAssets(ghCfg, ".", true, ".zip")
+				fmt.Printf("Uploading assets to Artifactory for caching.\n")
+				jf.ArtifactoryUpload(rtCfg, jf.ArtifactoryPattern(ghCfg.Release, true))
+			}
+		}
 	}
-
-	// If we get here, we're going to do the following: first we attempt to download the assset from artifactory. If we can't find it, we will download it
-	// from github. If we do find it, we will then upload it to artifactory for the next time someone tries to download this same thing.
-	fmt.Printf("Full cycle not yet implemented.\n")
 
 }
 
 func init() {
 	rootCmd.AddCommand(fetchCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// fetchCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// fetchCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

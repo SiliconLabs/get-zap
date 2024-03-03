@@ -58,7 +58,11 @@ func ArtifactoryDelete(cfg *ArtifactoryConfiguration, pattern string) {
 	fmt.Printf("Deleted files: %v\n", cnt)
 }
 
-func ArtifactoryDownload(cfg *ArtifactoryConfiguration, pattern string) {
+func ArtifactoryPattern(release string, isLocal bool) string {
+	return release + "/**"
+}
+
+func ArtifactoryDownload(cfg *ArtifactoryConfiguration, pattern string) int {
 
 	rtDetails := cfg.CreateDetails()
 
@@ -75,6 +79,7 @@ func ArtifactoryDownload(cfg *ArtifactoryConfiguration, pattern string) {
 	cobra.CheckErr(err)
 
 	fmt.Printf("Downloaded files: success %v, failure %v\n", success, failures)
+	return success
 }
 
 func ArtifactoryUpload(cfg *ArtifactoryConfiguration, pattern string) {

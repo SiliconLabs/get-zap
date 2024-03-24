@@ -10,6 +10,7 @@ import (
 	"silabs/get-zap/jf"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -27,8 +28,6 @@ const rtPath = "rtPath"
 const useRt = "useRt"
 const useGh = "useGh"
 const localRoot = "localRoot"
-
-var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -70,9 +69,9 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initViper)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.get-zap.yaml)")
+	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", fmt.Sprintf("config file (default is $HOME/.%s.json)", configKey))
 	rootCmd.PersistentFlags().String(ownerArg, "project-chip", "Owner of the github repository.")
 	rootCmd.PersistentFlags().String(repoArg, "zap", "Name of the github repository.")
 	rootCmd.PersistentFlags().StringP(githubTokenArg, "t", "", "Github token to use for authentication.")
@@ -86,42 +85,36 @@ func init() {
 	rootCmd.PersistentFlags().String(rtPath, "", "Artifactory path within the repo.")
 	rootCmd.PersistentFlags().Bool(useRt, true, "Use Artifactory.")
 	rootCmd.PersistentFlags().Bool(useGh, true, "Use GitHub.")
-
-	viper.BindPFlag(ownerArg, rootCmd.PersistentFlags().Lookup(ownerArg))
-	viper.BindPFlag(repoArg, rootCmd.PersistentFlags().Lookup(repoArg))
-	viper.BindPFlag(githubTokenArg, rootCmd.PersistentFlags().Lookup(githubTokenArg))
-	viper.BindPFlag(releaseArg, rootCmd.PersistentFlags().Lookup(releaseArg))
-	viper.BindPFlag(assetArg, rootCmd.PersistentFlags().Lookup(assetArg))
-	viper.BindPFlag(rtUrl, rootCmd.PersistentFlags().Lookup(rtUrl))
-	viper.BindPFlag(rtApiKey, rootCmd.PersistentFlags().Lookup(rtApiKey))
-	viper.BindPFlag(rtUser, rootCmd.PersistentFlags().Lookup(rtUser))
-	viper.BindPFlag(rtRepo, rootCmd.PersistentFlags().Lookup(rtRepo))
-	viper.BindPFlag(rtPath, rootCmd.PersistentFlags().Lookup(rtPath))
-	viper.BindPFlag(useRt, rootCmd.PersistentFlags().Lookup(useRt))
-	viper.BindPFlag(useGh, rootCmd.PersistentFlags().Lookup(useGh))
-	viper.BindPFlag(localRoot, rootCmd.PersistentFlags().Lookup(localRoot))
 }
 
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
+// This function initializes viper, which is used to read configuration from environment variables and config files.
+const configKey = "get_zap"
+
+var configFile = ""
+
+func initViper() {
+
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
 	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".get-zap" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("json")
-		viper.SetConfigName(".get-zap")
+		viper.SetConfigName("." + configKey) // The config file is the configKey, prepended with a dot
+		viper.AddConfigPath("$HOME")         // Look in user home directory
+		viper.SetConfigType("json")          // And the file is in JSON format.
 	}
 
-	viper.SetEnvPrefix("get_zap") // will be uppercased automatically
-	viper.AutomaticEnv()          // read in environment variables that match
+	viper.ReadInConfig()
+	viper.SetEnvPrefix(configKey)
+	viper.AutomaticEnv()
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
+	// We bind all the flags, so that variables set by viper, but marked as required, are considered properly set
+	rootCmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if !f.Changed && viper.IsSet(f.Name) {
+			rootCmd.Flags().Set(f.Name, viper.GetString(f.Name))
+		}
+	})
+
+	viper.BindPFlags(rootCmd.PersistentFlags())
+	viper.BindPFlags(rootCmd.Flags())
 }
+
+// EO Viper configuration.
